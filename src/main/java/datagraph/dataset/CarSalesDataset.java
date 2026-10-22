@@ -46,7 +46,7 @@ public class CarSalesDataset implements SampleDataset {
     private static final Metric REVENUE = new Metric("Revenue", "SUM(revenue)", Format.MONEY);
 
     private static final DatasetDefinition DEFINITION = new DatasetDefinition(
-            "cars", "Car sales", "Automotive",
+            "cars", "Car Sales", "Automotive",
             "New-car sales across a chain of dealerships.",
             "Region", REGIONS,
             List.of(CARS_SOLD, REVENUE,

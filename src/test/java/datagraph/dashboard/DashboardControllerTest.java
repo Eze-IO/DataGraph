@@ -44,7 +44,7 @@ class DashboardControllerTest {
         mvc.perform(get("/api/datasets"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].id", contains("retail", "cars", "social")))
-                .andExpect(jsonPath("$[1].name", is("Car sales")))
+                .andExpect(jsonPath("$[1].name", is("Car Sales")))
                 .andExpect(jsonPath("$[2].segmentLabel", is("Platform")))
                 .andExpect(jsonPath("$[2].segments", hasSize(4)));
     }

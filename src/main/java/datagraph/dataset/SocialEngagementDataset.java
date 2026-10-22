@@ -49,7 +49,7 @@ public class SocialEngagementDataset implements SampleDataset {
     private static final Metric FAVORITES = new Metric("Favorites", "SUM(favorites)", Format.COUNT);
 
     private static final DatasetDefinition DEFINITION = new DatasetDefinition(
-            "social", "Likes & favorites", "Social media",
+            "social", "Likes & Favorites", "Social Media",
             "Views, likes and favorites on creators' posts.",
             "Platform", PLATFORMS,
             List.of(VIEWS, LIKES, FAVORITES,

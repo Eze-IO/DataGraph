@@ -8,7 +8,7 @@ A navbar at the top switches between three datasets:
 |-----------------------|--------------|-----------------------------------------------------------------------|----------|
 | **Customer Sales**    | Retail       | Revenue, orders, units, average order; revenue by month, region, category; top products | Region   |
 | **Car Sales**         | Automotive   | Cars sold, revenue, average price, electric share; cars sold by month and body type; revenue by region; top models | Region   |
-| **Likes & Favorites** | Social media | Views, likes, favorites, like rate; likes and favorites by month; views by platform; likes by content type; top creators | Platform |
+| **Likes & Favorites** | Social Media | Views, likes, favorites, like rate; likes and favorites by month; views by platform; likes by content type; top creators | Platform |
 
 Each dashboard has four totals at the top and four charts: a line chart by month, a bar chart by region or platform, a doughnut chart by category, and a bar chart of the top items. The filter updates every chart; in the region/platform chart, the selected one is highlighted. Each tab has its own link (for example `/#cars`). The page follows your system's light or dark mode and works on phones.
 
@@ -44,9 +44,9 @@ mvn test
 
 Every time the app starts, it makes up the data in memory. A fixed random seed means you get the same numbers on every run. All three datasets cover 24 months (October 2024 to September 2026):
 
-- **Customer sales**: about 3,800 orders at an office and electronics store, across 4 regions, 4 categories and 12 products. Sales grow over time, peak in November and December, and dip in January and February.
-- **Car sales**: about 6,000 sales at a chain of dealerships, across 4 regions, 4 body types and 8 models. Sales are strongest in spring and December, and electric models grow from about 10% to 25% of sales.
-- **Likes & favorites**: about 6,100 posts by 10 creators on 4 fictional social apps, as videos, photos, articles and polls. Audiences grow about 4% a month, and a few posts go viral.
+- **Customer Sales**: about 3,800 orders at an office and electronics store, across 4 regions, 4 categories and 12 products. Sales grow over time, peak in November and December, and dip in January and February.
+- **Car Sales**: about 6,000 sales at a chain of dealerships, across 4 regions, 4 body types and 8 models. Sales are strongest in spring and December, and electric models grow from about 10% to 25% of sales.
+- **Likes & Favorites**: about 6,100 posts by 10 creators on 4 fictional social apps, as videos, photos, articles and polls. Audiences grow about 4% a month, and a few posts go viral.
 
 You can change the seed, start month and number of months in [`application.properties`](src/main/resources/application.properties).
 
@@ -90,9 +90,9 @@ src/main/java/datagraph/
   DataGraphApplication.java               App entry point
   spark/SparkConfig.java                  Starts and tunes the Spark session
   dataset/                                The datasets and their definitions
-    RetailSalesDataset.java               Customer sales
-    CarSalesDataset.java                  Car sales
-    SocialEngagementDataset.java          Likes & favorites
+    RetailSalesDataset.java               Customer Sales
+    CarSalesDataset.java                  Car Sales
+    SocialEngagementDataset.java          Likes & Favorites
   dashboard/DashboardRepository.java      Loads data into Spark; Spark SQL behind each dashboard
   dashboard/DashboardController.java      JSON API
 src/main/resources/

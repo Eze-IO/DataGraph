@@ -49,7 +49,7 @@ public class RetailSalesDataset implements SampleDataset {
     private static final Metric REVENUE = new Metric("Revenue", "SUM(revenue)", Format.MONEY);
 
     private static final DatasetDefinition DEFINITION = new DatasetDefinition(
-            "retail", "Customer sales", "Retail",
+            "retail", "Customer Sales", "Retail",
             "Orders from customers of an office and electronics store.",
             "Region", REGIONS,
             List.of(REVENUE,
