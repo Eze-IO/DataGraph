@@ -12,5 +12,3 @@ out/
 # macOS
 .DS_Store
 
-# Local database settings override
-/datagraph.properties

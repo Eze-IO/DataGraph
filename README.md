@@ -1,67 +1,76 @@
 # DataGraph
 
-A desktop SQL Server query client built with JavaFX. Connect to a database, run SQL (typed or opened from a `.sql` file), view the results in a table, and export them to CSV.
+A web dashboard that turns sales data into charts. It's a Spring Boot app that generates made-up sample sales for a fictional company, serves them as JSON, and draws them in the browser with [Chart.js](https://www.chartjs.org/).
+
+The dashboard shows:
+
+- totals for revenue, orders, units sold and average order value
+- revenue by month (line chart)
+- revenue by region (bar chart)
+- revenue by product category (doughnut chart)
+- top products by revenue (horizontal bar chart)
+
+A **Region** filter at the top updates every chart. It follows your system's light or dark mode and works on phones.
 
 ## Requirements
 
 - **Java 21 or newer** (JDK). Check with `java -version`.
 - **Maven 3.9+**. Check with `mvn -v`.
 
-You don't need to install JavaFX, the SQL Server driver or opencsv separately: Maven downloads them.
-
-## Build and run
-
-Run straight from source:
+## Run it
 
 ```bash
-mvn javafx:run
+mvn spring-boot:run
 ```
 
-Build a single runnable jar (includes all dependencies):
+Then open <http://localhost:8080>.
+
+To build a runnable jar instead:
 
 ```bash
 mvn package
-java -jar target/datagraph-1.0.0-all.jar
+java -jar target/datagraph-2.0.0.jar
 ```
 
-The bundled jar contains the JavaFX files for the operating system it was built on. Build it on each OS you want to run it on (macOS, Windows, Linux).
+To use a different port, add `--server.port=9090` after the jar name, or run `mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=9090`.
 
-## Using DataGraph
+## Run the tests
 
-1. Start the app. It opens on the query screen and shows the **Connect** dialog.
-2. Enter the host, port, database, username and password, then click **Connect**. If the connection fails, the error is shown in the dialog so you can fix it and try again. The title bar shows which database you're connected to.
-3. Type a SQL statement on the left, or use **File > Open SQL file**, then click **RUN**. Results appear in the table on the right.
-4. Use **File > Export as CSV file** to save the results.
-5. **File > Connect…** switches to another database, and **File > Disconnect** forgets the current credentials. Passwords are never saved to disk.
+```bash
+mvn test
+```
 
-**File > Show error pop-ups** turns query error pop-ups on or off (on by default).
+## Sample data
 
-## Database settings
+Every time the app starts, it generates about 3,800 orders into an in-memory [H2](https://www.h2database.com/) database. The data covers 24 months (October 2024 to September 2026) across four regions, four categories and twelve products. Sales grow over time, peak in November and December, and dip in January and February.
 
-The default connection is set in [`src/main/resources/datagraph.properties`](src/main/resources/datagraph.properties):
+A fixed random seed means you get the same numbers on every run. You can change the seed, start month, number of months and orders per month in [`application.properties`](src/main/resources/application.properties).
 
-| Key          | Meaning                             | Default                                 |
-|--------------|-------------------------------------|-----------------------------------------|
-| `db.host`    | SQL Server host name                | `localhost`                             |
-| `db.port`    | Port                                | `1433`                                  |
-| `db.name`    | Database name                       | `master`                                |
-| `db.options` | Extra JDBC connection options       | `encrypt=true;trustServerCertificate=true` |
+## API
 
-To use a different server without rebuilding, either:
+The dashboard reads from these JSON endpoints. Each one except `/api/regions` and `/api/revenue/by-region` accepts an optional `?region=North` (or South, East, West).
 
-- put a `datagraph.properties` file with your values in the folder you run the app from (it's git-ignored), or
-- pass them on the command line, e.g. `java -Ddb.host=localhost -Ddb.name=MyDb -jar target/datagraph-1.0.0-all.jar`.
-
-These values are the defaults shown in the Connect dialog. Username and password are always entered in the dialog.
+| Endpoint                   | Returns                                               |
+|----------------------------|-------------------------------------------------------|
+| `GET /api/regions`         | The list of regions                                   |
+| `GET /api/summary`         | Revenue, orders, units and average order value        |
+| `GET /api/revenue/monthly` | Revenue per month                                     |
+| `GET /api/revenue/by-region` | Revenue per region (always all regions)             |
+| `GET /api/revenue/by-category` | Revenue per product category                      |
+| `GET /api/top-products`    | Top products by revenue (`?limit=5`, 1–50)            |
 
 ## Project layout
 
 ```
-pom.xml                         Maven build
-src/main/java/datagraph         Java sources (Main, core/, ui/)
-src/main/resources              FXML screens, images, default datagraph.properties
+pom.xml                                Maven build (Spring Boot 4, Java 21)
+src/main/java/datagraph/
+  DataGraphApplication.java            App entry point
+  sample/SampleDataGenerator.java      Generates the sample orders at startup
+  sales/SalesRepository.java           SQL queries behind each chart
+  sales/SalesController.java           JSON API
+src/main/resources/
+  application.properties               Database and sample-data settings
+  schema.sql                           The orders table
+  static/                              Dashboard page (index.html, app.js, styles.css)
+src/test/java/                         API tests
 ```
-
-## Opening in an IDE
-
-Open the folder in IntelliJ IDEA, Eclipse or VS Code and import it as a Maven project. The IDE picks up the dependencies from `pom.xml`.

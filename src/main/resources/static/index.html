@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DataGraph</title>
+    <link rel="icon" href="favicon.png">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Served from the Chart.js WebJar in pom.xml -->
+    <script src="webjars/chart.js/4.5.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <img src="favicon.png" alt="" width="32" height="32">
+        <div>
+            <h1>DataGraph</h1>
+            <p class="subtitle">Sales dashboard &middot; sample data</p>
+        </div>
+    </div>
+    <label class="filter">
+        <span>Region</span>
+        <select id="region">
+            <option value="">All regions</option>
+        </select>
+    </label>
+</header>
+
+<main>
+    <section class="kpis" aria-label="Totals">
+        <div class="kpi"><span class="kpi-label">Revenue</span><span class="kpi-value" id="kpi-revenue">–</span></div>
+        <div class="kpi"><span class="kpi-label">Orders</span><span class="kpi-value" id="kpi-orders">–</span></div>
+        <div class="kpi"><span class="kpi-label">Units sold</span><span class="kpi-value" id="kpi-units">–</span></div>
+        <div class="kpi"><span class="kpi-label">Average order</span><span class="kpi-value" id="kpi-average">–</span></div>
+    </section>
+
+    <section class="charts">
+        <article class="card wide">
+            <h2>Revenue by month</h2>
+            <div class="chart-box"><canvas id="chart-monthly"></canvas></div>
+        </article>
+        <article class="card">
+            <h2>Revenue by region</h2>
+            <div class="chart-box"><canvas id="chart-region"></canvas></div>
+        </article>
+        <article class="card">
+            <h2>Revenue by category</h2>
+            <div class="chart-box"><canvas id="chart-category"></canvas></div>
+        </article>
+        <article class="card wide">
+            <h2>Top products</h2>
+            <div class="chart-box"><canvas id="chart-products"></canvas></div>
+        </article>
+    </section>
+
+    <p class="error" id="error" hidden></p>
+    <p class="note">All numbers are randomly generated sample data for a fictional company.</p>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
