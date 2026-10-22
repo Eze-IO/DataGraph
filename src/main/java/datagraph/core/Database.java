@@ -7,13 +7,14 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Properties;
-import javafx.scene.control.Alert;
 
 
 public class Database {
 
     private static String username;
     private static String password;
+    private static String lastUsername;
+    private static String lastError;
 
     //Safely checks if username and password are correct for the database
     public static Boolean IsUserAuthorized(String username, String password){
@@ -21,6 +22,7 @@ public class Database {
         try{
             Database.username = username;
             Database.password = password;
+            Database.lastUsername = username;
             c = GetConnection(Database.username, Database.password);
             if(c != null)
                 return true;
@@ -140,31 +142,32 @@ public class Database {
             Connection conn = DriverManager.getConnection(url, username, password);
             //conn.setNetworkTimeout(null, 120);
             System.out.println("Connection successfully created!");
+            lastError = null;
             return conn; //Successfully connected to the database
         }
         catch(Exception e)
         {
-            //Error on connecting to the database
+            //Error on connecting to the database; callers show GetLastError()
             ClearCredentials();
-            System.out.println("Failed to create connection!");
-            String m = "Error: "+e;
-            Database.showMessage(m);
+            lastError = e.getMessage();
+            System.out.println("Failed to create connection: "+e);
             return null;
         }
     }
 
-    private static void showMessage(String message){
-        try{
-            System.out.println(message);
-            if(UserSettings.GetShowErrors()) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle(Information.Title());
-                alert.setHeaderText(Information.Name());
-                alert.setContentText(message);
-                alert.show();
-            }
-        }
-        catch(Exception ex) {}
+    //True after a successful connect, until disconnect or a failed connection
+    public static boolean IsConnected() {
+        return !HelperFunction.IsEmptyOrNull(username) && !HelperFunction.IsEmptyOrNull(password);
+    }
+
+    //Username of the last connection attempt (used to prefill the connect dialog)
+    public static String GetUsername() {
+        return lastUsername;
+    }
+
+    //Message from the last failed connection, or null
+    public static String GetLastError() {
+        return lastError;
     }
 
     public static void ClearCredentials() {

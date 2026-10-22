@@ -8,7 +8,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.*;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.input.MouseEvent;
@@ -42,7 +41,13 @@ public class ViewController {
     @FXML
     private Menu fileMenu;
     @FXML
-    private MenuItem logoutOption;
+    private MenuItem connectOption;
+    @FXML
+    private MenuItem disconnectOption;
+    @FXML
+    private CheckMenuItem showErrorsOption;
+    @FXML
+    private Label connectionLabel;
     @FXML
     private SeparatorMenuItem firstMenuSeparator;
     @FXML
@@ -119,6 +124,7 @@ public class ViewController {
             fileMenu.setOnShowing(event -> {
                 exportOption.setDisable(true);
                 openFileOption.setDisable(false);
+                disconnectOption.setDisable(!Database.IsConnected());
 
                 /*
                     Make 'export' options available when a
@@ -140,6 +146,9 @@ public class ViewController {
                 public void handle(MouseEvent e) {
                     try{
                         runButton.setDisable(true);
+                        //Ask for a connection first if there isn't one
+                        if(!Database.IsConnected() && !connect())
+                            return;
                         //Check if there is an actual statement
                         if(!HelperFunction.IsEmptyOrNull(txtInput.getText())) {
                             formatResults(Database.GetConnection());
@@ -156,12 +165,19 @@ public class ViewController {
                 }
             });
 
-            //Set user logout option event
-            logoutOption.setOnAction(event -> {
+            //Set connect and disconnect option events
+            connectOption.setOnAction(event -> connect());
+            disconnectOption.setOnAction(event -> {
                 Database.ClearCredentials();
-                switchToLoginScreen();
-                System.out.println("User has logged out of the '"+ Database.GetDatabaseName()+"' database!");
+                updateConnectionStatus();
+                System.out.println("Disconnected from the '"+ Database.GetDatabaseName()+"' database!");
             });
+
+            //Set 'show error pop-ups' toggle
+            showErrorsOption.setSelected(UserSettings.GetShowErrors());
+            showErrorsOption.setOnAction(event -> UserSettings.SetShowErrors(showErrorsOption.isSelected()));
+
+            updateConnectionStatus();
 
         } catch (Exception ex) {
             if(!HelperFunction.IsEmptyOrNull(ex.getMessage()))
@@ -295,13 +311,20 @@ public class ViewController {
         catch(Exception ex) {}
     }
 
-    //Switches to the login screen
-    private void switchToLoginScreen() {
-        try{
-            Screens screen = new Screens(frame.getScene());
-            screen.addScreen("login", FXMLLoader.load(getClass().getResource("Login.fxml")));
-            screen.activate("login");
-        }
-        catch (Exception ex) { return; }
+    //Shows the connect dialog; returns true when connected
+    public boolean connect() {
+        boolean connected = ConnectDialog.Show(frame.getScene().getWindow());
+        updateConnectionStatus();
+        if(connected)
+            System.out.println("Connected to the '"+ Database.GetDatabaseName()+"' database!");
+        return connected;
+    }
+
+    //Shows the current connection in the title bar
+    private void updateConnectionStatus() {
+        if(Database.IsConnected())
+            connectionLabel.setText("Connected: "+Database.GetDatabaseName()+" on "+Database.GetDomain());
+        else
+            connectionLabel.setText("Not connected");
     }
 }

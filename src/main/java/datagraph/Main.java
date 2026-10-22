@@ -2,12 +2,14 @@ package datagraph;
 
 import datagraph.core.*;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
 import datagraph.ui.Screens;
+import datagraph.ui.ViewController;
 
 
 public class Main extends Application {
@@ -20,8 +22,10 @@ public class Main extends Application {
             //Set connection information to connect to a database
             Database.LoadConnectionSettings();
 
-            //Create application window
-            Parent root = FXMLLoader.load(getClass().getResource("ui/Login.fxml"));
+            //Create application window, starting on the query screen
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("ui/View.fxml"));
+            Parent root = loader.load();
+            ViewController controller = loader.getController();
 
             //Set window attributes
             primaryStage.setTitle(Information.Name());
@@ -40,6 +44,9 @@ public class Main extends Application {
             //Show window
             primaryStage.show();
             Screens.CenterWindow(primaryStage);
+
+            //Offer to connect right away
+            Platform.runLater(controller::connect);
         }
         catch(Exception er) {
             System.out.println("Error on program launch: "+er.getMessage());

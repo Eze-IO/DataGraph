@@ -1,36 +1,10 @@
 package datagraph.ui;
 
-import javafx.application.Application;
-import java.util.*;
-import javafx.scene.layout.*;
-import javafx.scene.*;
-import javafx.fxml.*;
-import javafx.stage.*;
-import javafx.geometry.*;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
 
 public class Screens {
-    private HashMap<String, Pane> screenMap = new HashMap<>();
-    private Scene main;
-
-    public Screens(Scene main) {
-        this.main = main;
-    }
-
-    protected void addScreen(String name, Pane pane){
-        if(!screenMap.containsKey(name))
-            screenMap.put(name, pane);
-    }
-
-    protected void removeScreen(String name){
-        if(screenMap.containsKey(name))
-            screenMap.remove(name);
-    }
-
-    protected void activate(String name){
-        main.setRoot(screenMap.get(name));
-        main.getWindow().sizeToScene();
-    }
-
     public static void CenterWindow(Stage stage) {
         try{
             stage.centerOnScreen();
