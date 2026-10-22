@@ -1,16 +1,16 @@
 # DataGraph
 
-A web dashboard that turns sales data into charts. It's a Spring Boot app that generates made-up sample sales for a fictional company, calculates the chart data with [Apache Spark](https://spark.apache.org/), serves it as JSON, and draws it in the browser with [Chart.js](https://www.chartjs.org/).
+A web dashboard that turns data from different industries into charts. It's a Spring Boot app that generates made-up sample data, calculates the charts with [Apache Spark](https://spark.apache.org/), and draws them in the browser with [Chart.js](https://www.chartjs.org/).
 
-The dashboard shows:
+A navbar at the top switches between three datasets:
 
-- totals for revenue, orders, units sold and average order value
-- revenue by month (line chart)
-- revenue by region (bar chart)
-- revenue by product category (doughnut chart)
-- top products by revenue (horizontal bar chart)
+| Tab                   | Industry     | Shows                                                                 | Filter   |
+|-----------------------|--------------|-----------------------------------------------------------------------|----------|
+| **Customer sales**    | Retail       | Revenue, orders, units, average order; revenue by month, region, category; top products | Region   |
+| **Car sales**         | Automotive   | Cars sold, revenue, average price, electric share; cars sold by month and body type; revenue by region; top models | Region   |
+| **Likes & favorites** | Social media | Views, likes, favorites, like rate; likes and favorites by month; views by platform; likes by content type; top creators | Platform |
 
-A **Region** filter at the top updates every chart. It follows your system's light or dark mode and works on phones.
+Each dashboard has four totals at the top and four charts: a line chart by month, a bar chart by region or platform, a doughnut chart by category, and a bar chart of the top items. The filter updates every chart; in the region/platform chart, the selected one is highlighted. Each tab has its own link (for example `/#cars`). The page follows your system's light or dark mode and works on phones.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ A **Region** filter at the top updates every chart. It follows your system's lig
 mvn spring-boot:run
 ```
 
-Then open <http://localhost:8080> once the log says `Started DataGraphApplication`. Startup takes 20–30 seconds because Spark starts inside the app and prepares its queries.
+Then open <http://localhost:8080> once the log says `Started DataGraphApplication`. Startup takes about 25 seconds because Spark starts inside the app and calculates the dashboards.
 
 To build a runnable jar instead:
 
@@ -40,49 +40,63 @@ To use a different port, add `--server.port=9090` after the jar name, or run `mv
 mvn test
 ```
 
+## Sample data
+
+Every time the app starts, it makes up the data in memory. A fixed random seed means you get the same numbers on every run. All three datasets cover 24 months (October 2024 to September 2026):
+
+- **Customer sales**: about 3,800 orders at an office and electronics store, across 4 regions, 4 categories and 12 products. Sales grow over time, peak in November and December, and dip in January and February.
+- **Car sales**: about 6,000 sales at a chain of dealerships, across 4 regions, 4 body types and 8 models. Sales are strongest in spring and December, and electric models grow from about 10% to 25% of sales.
+- **Likes & favorites**: about 6,100 posts by 10 creators on 4 fictional social apps, as videos, photos, articles and polls. Audiences grow about 4% a month, and a few posts go viral.
+
+You can change the seed, start month and number of months in [`application.properties`](src/main/resources/application.properties).
+
 ## How Spark is used
 
-Spark runs inside the app in local mode, using all CPU cores; no cluster or separate install is needed.
+Spark runs inside the app in local mode; no cluster or separate install is needed.
 
-1. At startup, the sample orders are loaded into a Spark DataFrame, cached in memory and registered as the `orders` view.
-2. Each API call runs a Spark SQL query on that view (for example `SELECT region, SUM(revenue) … GROUP BY region`). The region filter is passed as a named parameter, never pasted into the SQL.
-3. Every query is run once at startup, so Spark has already compiled it before the first visitor arrives.
+1. At startup, each dataset is loaded into a Spark DataFrame, cached in memory and registered as a view named after the dataset (`retail`, `cars`, `social`).
+2. Each dashboard is calculated with Spark SQL queries built from the dataset's definition (for example `SELECT segment, SUM(revenue) … GROUP BY segment`). The filter value is passed as a named parameter, never pasted into the SQL.
+3. The data doesn't change after startup, so each dashboard is calculated once and reused. The three unfiltered dashboards are calculated during startup; the 12 filtered ones are calculated in the background right after. Every request is then answered in a few milliseconds.
 
-To run the queries on a real Spark cluster instead, set `datagraph.spark.master` in [`application.properties`](src/main/resources/application.properties), for example `spark://host:7077`.
+Spark is tuned for this small amount of data: two partitions per dataset, two shuffle partitions, adaptive query planning off, and a bigger cache for Spark's compiled code. To run the queries on a real Spark cluster instead, set `datagraph.spark.master` in [`application.properties`](src/main/resources/application.properties), for example `spark://host:7077`.
 
 Spark needs access to some JDK internals on Java 17+. The build sets the required `--add-opens` flags for `mvn spring-boot:run` and `mvn test`, and writes them into the jar's manifest so `java -jar` works without extra flags. Because of Spark, the jar is about 300 MB.
 
-## Sample data
-
-Every time the app starts, it generates about 3,800 orders in memory. The data covers 24 months (October 2024 to September 2026) across four regions, four categories and twelve products. Sales grow over time, peak in November and December, and dip in January and February.
-
-A fixed random seed means you get the same numbers on every run. You can change the seed, start month, number of months and orders per month in [`application.properties`](src/main/resources/application.properties).
-
 ## API
 
-The dashboard reads from these JSON endpoints. Each one except `/api/regions` and `/api/revenue/by-region` accepts an optional `?region=North` (or South, East, West).
+| Endpoint                                 | Returns                                                        |
+|------------------------------------------|----------------------------------------------------------------|
+| `GET /api/datasets`                      | The datasets in navbar order, with their filter name and values |
+| `GET /api/datasets/{id}/dashboard`       | Totals and all four charts for one dataset                      |
+| `GET /api/datasets/{id}/dashboard?segment=West` | The same, filtered to one region or platform             |
 
-| Endpoint                   | Returns                                               |
-|----------------------------|-------------------------------------------------------|
-| `GET /api/regions`         | The list of regions                                   |
-| `GET /api/summary`         | Revenue, orders, units and average order value        |
-| `GET /api/revenue/monthly` | Revenue per month                                     |
-| `GET /api/revenue/by-region` | Revenue per region (always all regions)             |
-| `GET /api/revenue/by-category` | Revenue per product category                      |
-| `GET /api/top-products`    | Top products by revenue (`?limit=5`, 1–50)            |
+An unknown dataset returns 404; an unknown filter value returns 400.
+
+## Adding a dataset
+
+Each dataset is one class in [`src/main/java/datagraph/dataset`](src/main/java/datagraph/dataset) that implements `SampleDataset`:
+
+1. `definition()`: its name, industry, filter, totals and charts. Each number is a Spark SQL aggregate, such as `SUM(views)`.
+2. `measures()`: its number columns. Every dataset also has `event_date`, `segment` (region/platform), `group_name` (category) and `item` (product/model/creator).
+3. `generate()`: makes up its rows.
+
+Annotate it with `@Component` and `@Order(n)` to set its place in the navbar. The API, Spark queries and page pick it up automatically.
 
 ## Project layout
 
 ```
-pom.xml                                Maven build (Spring Boot 4, Spark 4, Java 21)
+pom.xml                                   Maven build (Spring Boot 4, Spark 4, Java 21)
 src/main/java/datagraph/
-  DataGraphApplication.java            App entry point
-  spark/SparkConfig.java               Starts the Spark session
-  sample/SampleDataGenerator.java      Generates the sample orders
-  sales/SalesRepository.java           Loads orders into Spark; Spark SQL behind each chart
-  sales/SalesController.java           JSON API
+  DataGraphApplication.java               App entry point
+  spark/SparkConfig.java                  Starts and tunes the Spark session
+  dataset/                                The datasets and their definitions
+    RetailSalesDataset.java               Customer sales
+    CarSalesDataset.java                  Car sales
+    SocialEngagementDataset.java          Likes & favorites
+  dashboard/DashboardRepository.java      Loads data into Spark; Spark SQL behind each dashboard
+  dashboard/DashboardController.java      JSON API
 src/main/resources/
-  application.properties               Spark and sample-data settings
-  static/                              Dashboard page (index.html, app.js, styles.css)
-src/test/java/                         API tests
+  application.properties                  Spark and sample-data settings
+  static/                                 Dashboard page (index.html, app.js, styles.css)
+src/test/java/                            API and Spark tests
 ```
