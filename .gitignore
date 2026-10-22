@@ -1,0 +1,16 @@
+# Maven build output
+target/
+
+# Old IntelliJ build output
+out/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store
+
+# Local database settings override
+/datagraph.properties
