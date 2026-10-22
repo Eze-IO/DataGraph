@@ -6,9 +6,9 @@ A navbar at the top switches between three datasets:
 
 | Tab                   | Industry     | Shows                                                                 | Filter   |
 |-----------------------|--------------|-----------------------------------------------------------------------|----------|
-| **Customer sales**    | Retail       | Revenue, orders, units, average order; revenue by month, region, category; top products | Region   |
-| **Car sales**         | Automotive   | Cars sold, revenue, average price, electric share; cars sold by month and body type; revenue by region; top models | Region   |
-| **Likes & favorites** | Social media | Views, likes, favorites, like rate; likes and favorites by month; views by platform; likes by content type; top creators | Platform |
+| **Customer Sales**    | Retail       | Revenue, orders, units, average order; revenue by month, region, category; top products | Region   |
+| **Car Sales**         | Automotive   | Cars sold, revenue, average price, electric share; cars sold by month and body type; revenue by region; top models | Region   |
+| **Likes & Favorites** | Social media | Views, likes, favorites, like rate; likes and favorites by month; views by platform; likes by content type; top creators | Platform |
 
 Each dashboard has four totals at the top and four charts: a line chart by month, a bar chart by region or platform, a doughnut chart by category, and a bar chart of the top items. The filter updates every chart; in the region/platform chart, the selected one is highlighted. Each tab has its own link (for example `/#cars`). The page follows your system's light or dark mode and works on phones.
 
