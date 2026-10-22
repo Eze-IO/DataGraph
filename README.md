@@ -1,8 +1,6 @@
 # DataGraph
 
-A desktop SQL Server query client built with JavaFX. Log in to a database, run SQL (typed or opened from a `.sql` file), view the results in a table, and export them to CSV.
-
-DataGraph began in 2018 as *Zeal.Application*, a class project by Zeal Productivity Solutions for CIS3365. In 2026 it was renamed and modernized to build with Maven on Java 21.
+A desktop SQL Server query client built with JavaFX. Connect to a database, run SQL (typed or opened from a `.sql` file), view the results in a table, and export them to CSV.
 
 ## Requirements
 
@@ -28,6 +26,16 @@ java -jar target/datagraph-1.0.0-all.jar
 
 The bundled jar contains the JavaFX files for the operating system it was built on. Build it on each OS you want to run it on (macOS, Windows, Linux).
 
+## Using DataGraph
+
+1. Start the app. It opens on the query screen and shows the **Connect** dialog.
+2. Enter the host, port, database, username and password, then click **Connect**. If the connection fails, the error is shown in the dialog so you can fix it and try again. The title bar shows which database you're connected to.
+3. Type a SQL statement on the left, or use **File > Open SQL file**, then click **RUN**. Results appear in the table on the right.
+4. Use **File > Export as CSV file** to save the results.
+5. **File > Connect…** switches to another database, and **File > Disconnect** forgets the current credentials. Passwords are never saved to disk.
+
+**File > Show error pop-ups** turns query error pop-ups on or off (on by default).
+
 ## Database settings
 
 The default connection is set in [`src/main/resources/datagraph.properties`](src/main/resources/datagraph.properties):
@@ -44,7 +52,7 @@ To use a different server without rebuilding, either:
 - put a `datagraph.properties` file with your values in the folder you run the app from (it's git-ignored), or
 - pass them on the command line, e.g. `java -Ddb.host=localhost -Ddb.name=MyDb -jar target/datagraph-1.0.0-all.jar`.
 
-You can also change the host, port and database name at runtime from the gear icon on the login screen.
+These values are the defaults shown in the Connect dialog. Username and password are always entered in the dialog.
 
 ## Project layout
 
@@ -52,8 +60,6 @@ You can also change the host, port and database name at runtime from the gear ic
 pom.xml                         Maven build
 src/main/java/datagraph         Java sources (Main, core/, ui/)
 src/main/resources              FXML screens, images, default datagraph.properties
-instructions.txt / .html        Original end-user instructions
-.misc/                          Screenshots
 ```
 
 ## Opening in an IDE
