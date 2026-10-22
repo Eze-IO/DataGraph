@@ -65,6 +65,9 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <jvmArguments>${spark.jvm.args}</jvmArguments>
+                    <!-- The default adds -XX:TieredStopAtLevel=1 for faster startup, which turns off
+                         the JIT optimizations Spark relies on and makes queries several times slower -->
+                    <optimizedLaunch>false</optimizedLaunch>
                 </configuration>
             </plugin>
             <!-- Lets `java -jar` open the same JDK internals without extra flags -->

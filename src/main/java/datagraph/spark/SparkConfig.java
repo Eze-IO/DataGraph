@@ -14,12 +14,18 @@ public class SparkConfig {
 
     @Bean(destroyMethod = "stop")
     public SparkSession sparkSession(@Value("${datagraph.spark.master:local[*]}") String master,
-                                     @Value("${datagraph.spark.shuffle-partitions:4}") int shufflePartitions) {
+                                     @Value("${datagraph.spark.shuffle-partitions:2}") int shufflePartitions) {
         return SparkSession.builder()
                 .appName("DataGraph")
                 .master(master)
-                // The data is small; the default of 200 partitions would only add overhead
+                // The sample data is small (a few thousand rows per dataset), so Spark's defaults
+                // for big data mostly add coordination overhead: 200 shuffle partitions, and
+                // adaptive planning that re-plans every stage
                 .config("spark.sql.shuffle.partitions", shufflePartitions)
+                .config("spark.sql.adaptive.enabled", false)
+                // Spark compiles code for every query stage; the default cache of 100 compiled
+                // classes is too small for all the dashboards' queries, causing recompiles
+                .config("spark.sql.codegen.cache.maxEntries", 2000)
                 .config("spark.ui.enabled", false)
                 .getOrCreate();
     }
