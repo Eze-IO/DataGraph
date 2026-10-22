@@ -1,11 +1,10 @@
 package datagraph.sample;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,18 +17,26 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Fills the orders table with made-up sales for a fictional company.
+ * Makes up sales orders for a fictional company, as Spark rows.
  * A fixed seed makes the numbers the same on every start. Sales grow
  * slowly over time, peak in November and December, and dip in
  * January and February so the charts have a realistic shape.
  */
 @Component
-public class SampleDataGenerator implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(SampleDataGenerator.class);
+public class SampleDataGenerator {
 
     public static final List<String> REGIONS = List.of("North", "South", "East", "West");
     private static final double[] REGION_WEIGHTS = {0.30, 0.20, 0.32, 0.18};
+
+    /** Columns of the generated orders. */
+    public static final StructType ORDERS_SCHEMA = new StructType()
+            .add("order_date", DataTypes.DateType, false)
+            .add("region", DataTypes.StringType, false)
+            .add("category", DataTypes.StringType, false)
+            .add("product", DataTypes.StringType, false)
+            .add("units", DataTypes.IntegerType, false)
+            .add("unit_price", DataTypes.createDecimalType(10, 2), false)
+            .add("revenue", DataTypes.createDecimalType(12, 2), false);
 
     private record Product(String category, String name, double price, int maxUnits) {}
 
@@ -48,28 +55,24 @@ public class SampleDataGenerator implements ApplicationRunner {
             new Product("Software", "Cloud Storage", 120.00, 10)
     );
 
-    private final JdbcTemplate jdbc;
     private final long seed;
     private final YearMonth startMonth;
     private final int months;
     private final int ordersPerMonth;
 
-    public SampleDataGenerator(JdbcTemplate jdbc,
-                               @Value("${datagraph.sample.seed:42}") long seed,
+    public SampleDataGenerator(@Value("${datagraph.sample.seed:42}") long seed,
                                @Value("${datagraph.sample.start-month:2024-10}") String startMonth,
                                @Value("${datagraph.sample.months:24}") int months,
                                @Value("${datagraph.sample.orders-per-month:120}") int ordersPerMonth) {
-        this.jdbc = jdbc;
         this.seed = seed;
         this.startMonth = YearMonth.parse(startMonth);
         this.months = months;
         this.ordersPerMonth = ordersPerMonth;
     }
 
-    @Override
-    public void run(ApplicationArguments args) {
+    public List<Row> generateOrders() {
         Random random = new Random(seed);
-        List<Object[]> rows = new ArrayList<>();
+        List<Row> rows = new ArrayList<>();
 
         for (int m = 0; m < months; m++) {
             YearMonth month = startMonth.plusMonths(m);
@@ -86,16 +89,12 @@ public class SampleDataGenerator implements ApplicationRunner {
                         .setScale(2, RoundingMode.HALF_UP);
                 BigDecimal revenue = unitPrice.multiply(BigDecimal.valueOf(units));
 
-                rows.add(new Object[]{Date.valueOf(date), region, product.category(), product.name(),
-                        units, unitPrice, revenue});
+                rows.add(RowFactory.create(Date.valueOf(date), region, product.category(), product.name(),
+                        units, unitPrice, revenue));
             }
         }
 
-        jdbc.batchUpdate("""
-                INSERT INTO orders (order_date, region, category, product, units, unit_price, revenue)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, rows);
-        log.info("Generated {} sample orders from {} to {}", rows.size(), startMonth, startMonth.plusMonths(months - 1));
+        return rows;
     }
 
     //Holiday peak at the end of the year, slow start to the year

@@ -1,5 +1,6 @@
 package datagraph.sales;
 
+import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +26,20 @@ class SalesControllerTest {
     @Autowired
     private SalesRepository sales;
 
+    @Autowired
+    private SparkSession spark;
+
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    }
+
+    @Test
+    void ordersAreLoadedIntoSpark() {
+        assertThat(spark.catalog().tableExists("orders")).isTrue();
+        assertThat(spark.table("orders").count()).isEqualTo(sales.summary(null).orders());
     }
 
     @Test

@@ -1,90 +1,93 @@
 package datagraph.sales;
 
-import org.springframework.jdbc.core.JdbcTemplate;
+import datagraph.sample.SampleDataGenerator;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Aggregation queries over the orders table. Every method takes an
- * optional region; null means all regions.
+ * Chart data, calculated by Spark SQL over the sample orders.
+ * The orders are loaded once into a cached Spark DataFrame and
+ * registered as the "orders" view. Every method takes an optional
+ * region; null means all regions.
  */
 @Repository
 public class SalesRepository {
 
-    private final JdbcTemplate jdbc;
+    private static final Logger log = LoggerFactory.getLogger(SalesRepository.class);
 
-    public SalesRepository(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
+    private final SparkSession spark;
+
+    public SalesRepository(SparkSession spark, SampleDataGenerator generator) {
+        this.spark = spark;
+        Dataset<Row> orders = spark.createDataFrame(generator.generateOrders(), SampleDataGenerator.ORDERS_SCHEMA);
+        orders.cache().createOrReplaceTempView("orders");
+        log.info("Loaded {} sample orders into Spark", orders.count());
+        warmUp();
+    }
+
+    //Spark compiles each query the first time it runs; do that now so the first page load is fast
+    private void warmUp() {
+        for (String region : new String[]{null, SampleDataGenerator.REGIONS.get(0)}) {
+            summary(region);
+            revenueByMonth(region);
+            revenueByCategory(region);
+            topProducts(region, 5);
+        }
+        revenueByRegion();
     }
 
     public Summary summary(String region) {
-        Filter f = Filter.of(region);
-        return jdbc.queryForObject("""
+        Row row = query("""
                 SELECT COALESCE(SUM(revenue), 0) AS revenue, COUNT(*) AS orders, COALESCE(SUM(units), 0) AS units
-                FROM orders""" + f.where(),
-                (rs, i) -> {
-                    BigDecimal revenue = rs.getBigDecimal("revenue");
-                    long orders = rs.getLong("orders");
-                    BigDecimal average = orders == 0 ? BigDecimal.ZERO
-                            : revenue.divide(BigDecimal.valueOf(orders), 2, java.math.RoundingMode.HALF_UP);
-                    return new Summary(revenue, orders, rs.getLong("units"), average);
-                },
-                f.args());
+                FROM orders""", region, "").first();
+        BigDecimal revenue = row.getDecimal(0);
+        long orders = row.getLong(1);
+        BigDecimal average = orders == 0 ? BigDecimal.ZERO
+                : revenue.divide(BigDecimal.valueOf(orders), 2, RoundingMode.HALF_UP);
+        return new Summary(revenue, orders, row.getLong(2), average);
     }
 
     public List<LabeledValue> revenueByMonth(String region) {
-        Filter f = Filter.of(region);
-        return jdbc.query("""
-                SELECT YEAR(order_date) AS y, MONTH(order_date) AS m, SUM(revenue) AS revenue
-                FROM orders""" + f.where()
-                + " GROUP BY YEAR(order_date), MONTH(order_date) ORDER BY y, m",
-                (rs, i) -> new LabeledValue(String.format("%d-%02d", rs.getInt("y"), rs.getInt("m")),
-                        rs.getBigDecimal("revenue")),
-                f.args());
+        return toLabeledValues(query("""
+                SELECT date_format(order_date, 'yyyy-MM') AS month, SUM(revenue) AS revenue
+                FROM orders""", region, " GROUP BY month ORDER BY month"));
     }
 
     public List<LabeledValue> revenueByRegion() {
-        return jdbc.query("""
-                SELECT region, SUM(revenue) AS revenue FROM orders
-                GROUP BY region ORDER BY revenue DESC""",
-                (rs, i) -> new LabeledValue(rs.getString("region"), rs.getBigDecimal("revenue")));
+        return toLabeledValues(query("""
+                SELECT region, SUM(revenue) AS revenue FROM orders""", null, " GROUP BY region ORDER BY revenue DESC"));
     }
 
     public List<LabeledValue> revenueByCategory(String region) {
-        Filter f = Filter.of(region);
-        return jdbc.query("""
-                SELECT category, SUM(revenue) AS revenue FROM orders""" + f.where()
-                + " GROUP BY category ORDER BY revenue DESC",
-                (rs, i) -> new LabeledValue(rs.getString("category"), rs.getBigDecimal("revenue")),
-                f.args());
+        return toLabeledValues(query("""
+                SELECT category, SUM(revenue) AS revenue FROM orders""", region, " GROUP BY category ORDER BY revenue DESC"));
     }
 
     public List<LabeledValue> topProducts(String region, int limit) {
-        Filter f = Filter.of(region);
-        List<Object> args = new ArrayList<>(List.of(f.args()));
-        args.add(limit);
-        return jdbc.query("""
-                SELECT product, SUM(revenue) AS revenue FROM orders""" + f.where()
-                + " GROUP BY product ORDER BY revenue DESC LIMIT ?",
-                (rs, i) -> new LabeledValue(rs.getString("product"), rs.getBigDecimal("revenue")),
-                args.toArray());
+        return toLabeledValues(query("""
+                SELECT product, SUM(revenue) AS revenue FROM orders""", region, " GROUP BY product ORDER BY revenue DESC")
+                .limit(limit));
     }
 
-    //Optional WHERE clause; the region is always a bound parameter
-    private record Filter(String region) {
-        static Filter of(String region) {
-            return new Filter(region == null || region.isBlank() ? null : region);
-        }
+    //Adds an optional region filter; the region is always a named parameter, never pasted into the SQL
+    private Dataset<Row> query(String select, String region, String rest) {
+        if (region == null || region.isBlank())
+            return spark.sql(select + rest);
+        return spark.sql(select + " WHERE region = :region" + rest, Map.<String, Object>of("region", region));
+    }
 
-        String where() {
-            return region == null ? "" : " WHERE region = ?";
-        }
-
-        Object[] args() {
-            return region == null ? new Object[0] : new Object[]{region};
-        }
+    private static List<LabeledValue> toLabeledValues(Dataset<Row> result) {
+        return result.collectAsList().stream()
+                .map(row -> new LabeledValue(row.getString(0), row.getDecimal(1)))
+                .toList();
     }
 }
